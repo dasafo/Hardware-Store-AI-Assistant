@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hardware_store}
+      POSTGRES_USER: ${POSTGRES_USER:-david}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freedom85}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    depends_on:
+      - db
+    ports:
+      - "5050:80"
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.3
+    container_name: hsai-qdrant           # opcional
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "6333:6333"                       # REST + gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage       # persistencia
+
+# Qdrant, Redis y FastAPI se añadirán en pasos posteriores
+volumes:
+  db_data:
+  qdrant_data:
