@@ -1,0 +1,19 @@
+name: Feature
+description: Nueva funcionalidad o mejora
+labels: ["docs"]
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      placeholder: Describe la funcionalidad
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options: ["High", "Medium", "Low"]
+  - type: input
+    id: estima
+    attributes:
+      label: Estimación (hrs)
+      placeholder: "8"

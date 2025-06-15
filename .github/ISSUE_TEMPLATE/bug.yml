@@ -1,0 +1,88 @@
+name: Bug
+description: Reporta un comportamiento incorrecto o un fallo
+title: "[BUG] "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **¡Gracias por avisar del problema!**  
+        Completa los campos siguientes para que podamos reproducirlo y solucionarlo.
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción breve
+      description: Explica en una o dos frases cuál es el problema.
+      placeholder: "Al hacer POST /buscar con 'tornillos m5' devuelve 500."
+    validations:
+      required: true
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      description: Detalla paso a paso cómo llegar al fallo.
+      placeholder: |
+        1. Ir a /docs
+        2. Ejecutar POST /buscar con cuerpo `{ "query": "tornillos m5" }`
+        3. Observar error 500 en la respuesta
+    validations:
+      required: true
+
+  - type: textarea
+    id: resultado_esperado
+    attributes:
+      label: Resultado esperado
+      description: ¿Qué debería ocurrir?
+      placeholder: "Debería devolver un JSON con los productos coincidentes y código 200."
+    validations:
+      required: true
+
+  - type: textarea
+    id: resultado_real
+    attributes:
+      label: Resultado real
+      description: ¿Qué ocurre realmente?
+      placeholder: "Se recibe un 500 y el mensaje 'KeyError: sku'."
+    validations:
+      required: true
+
+  - type: input
+    id: entorno
+    attributes:
+      label: Entorno
+      description: Versión de la app / sistema operativo / navegador / Docker tag, etc.
+      placeholder: "Docker compose commit 4a3b2c1, FastAPI 0.110, MacOS 14.5"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options:
+        - High
+        - Medium
+        - Low
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: Estimación (hrs)
+      description: Cuántas horas est. para solucionarlo (opcional).
+      placeholder: "1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Información adicional / logs / capturas
+      description: Adjunta logs relevantes o capturas de pantalla.
+    validations:
+      required: false
