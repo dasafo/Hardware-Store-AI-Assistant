@@ -5,7 +5,7 @@ from app.services.reindex_service import reindex_products
 from app.models.reindex_models import ReindexRequest, ReindexResponse
 from app.utils.auth import admin_guard
 
-router = APIRouter(prefix="/api", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 @router.post("/reindex", response_model=ReindexResponse, status_code=202)
 def reindex_endpoint(

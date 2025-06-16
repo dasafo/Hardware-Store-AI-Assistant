@@ -60,13 +60,38 @@ services:
       - ../backend/.env
     ports:
       - "${FASTAPI_PORT:-8000}:8000"
+    volumes:
+      - ../backend:/app
     depends_on:
       db:
         condition: service_healthy
       qdrant:
         condition: service_started
 
+  # n8n workflow automation service
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: hsai-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+      - GENERIC_TIMEZONE=Europe/Madrid
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../n8n/workflows:/home/node/.n8n/workflows
+    depends_on:
+      - backend
+
 # Named volumes for data persistence
 volumes:
   db_data:
   qdrant_data:
+  n8n_data:

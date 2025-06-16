@@ -10,6 +10,10 @@ RUN pip install pdm
 # Copy the project definition and lock file
 COPY pyproject.toml pdm.lock* /app/
 
+# Configure PDM to use a system-wide virtual environment location
+ENV PDM_VENV_IN_PROJECT=false
+ENV PDM_VENV_BACKEND=venv
+
 # Install production dependencies using PDM
 # The --prod flag skips development dependencies
 RUN pdm install --prod --no-lock
@@ -21,4 +25,4 @@ COPY ./app /app/app
 EXPOSE 8000
 
 # Command to run the application using uvicorn
-CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["pdm", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

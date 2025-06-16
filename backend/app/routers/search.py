@@ -1,11 +1,12 @@
 # routers/search.py
 
-from fastapi import APIRouter
-from app.models.product import SearchRequest, SearchResponse, Product
+from fastapi import APIRouter, HTTPException
+from app.models.product import SearchRequest, SearchResponse, Product, ProductDetailsResponse, ProductWithStatus, ProductMetadata, ProductActions
 from app.services.embeddings import get_embedding
 from app.services.qdrant import search_in_qdrant
 from app.services.postgres import get_products_by_ids
 from app.utils.redis_client import redis_client
+from datetime import datetime
 
 router = APIRouter()
 
@@ -48,3 +49,108 @@ def search_products(payload: SearchRequest):
     
     # 6. Return the products found
     return {"results": [Product(**p) for p in products]}
+
+@router.get("/products/{sku}", response_model=Product)
+def get_product_by_sku(sku: str):
+    """
+    Get product details by SKU.
+    
+    Args:
+        sku (str): The SKU of the product to retrieve
+    
+    Returns:
+        Product: The product details
+    """
+    print(f"🔍 Getting product details for SKU: {sku}")
+    
+    # Get product details from PostgreSQL
+    products = get_products_by_ids([sku])
+    
+    if not products:
+        raise HTTPException(status_code=404, detail=f"Product with SKU {sku} not found")
+    
+    product = products[0]
+    print(f"✅ Found product: {product['name']}")
+    
+    return Product(**product)
+
+@router.get("/products/{sku}/details", response_model=ProductDetailsResponse)
+def get_product_details(sku: str, recommendations_limit: int = 5):
+    """
+    Get comprehensive product details including related products, stock status, and actions.
+    
+    Args:
+        sku (str): The SKU of the product to retrieve
+        recommendations_limit (int): Number of related products to return (default: 5)
+    
+    Returns:
+        ProductDetailsResponse: Comprehensive product information
+    """
+    print(f"🔍 Getting detailed product information for SKU: {sku}")
+    
+    # Get product details from PostgreSQL
+    products = get_products_by_ids([sku])
+    
+    if not products:
+        raise HTTPException(status_code=404, detail=f"Product with SKU {sku} not found")
+    
+    product_data = products[0]
+    print(f"✅ Found product: {product_data['name']}")
+    
+    # Calculate stock status
+    stock_quantity = product_data['stock']
+    if stock_quantity == 0:
+        stock_status = 'out_of_stock'
+    elif stock_quantity <= 5:
+        stock_status = 'low_stock'
+    else:
+        stock_status = 'available'
+    
+    # Get related products using the same logic as recommendations
+    related_products = []
+    try:
+        query = f"{product_data['name']} {product_data['description']}"
+        embedding = get_embedding(query)
+        similar_skus = search_in_qdrant(embedding, top_k=recommendations_limit + 5)
+        
+        # Remove the original SKU from recommendations
+        filtered_skus = [s for s in similar_skus if s != sku][:recommendations_limit]
+        
+        # Get product details for recommendations
+        if filtered_skus:
+            related_products = get_products_by_ids(filtered_skus)
+        
+        print(f"✅ Found {len(related_products)} related products")
+        
+    except Exception as e:
+        print(f"⚠️ Could not get related products: {str(e)}")
+        related_products = []
+    
+    # Create response
+    product_with_status = ProductWithStatus(
+        **product_data,
+        stock_status=stock_status
+    )
+    
+    metadata = ProductMetadata(
+        requested_sku=sku,
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        recommendations_count=len(related_products),
+        stock_level=stock_status
+    )
+    
+    actions = ProductActions(
+        add_to_cart=stock_quantity > 0,
+        request_quote=True,
+        view_similar=len(related_products) > 0
+    )
+    
+    response = ProductDetailsResponse(
+        product=product_with_status,
+        related_products=[Product(**p) for p in related_products],
+        metadata=metadata,
+        actions=actions
+    )
+    
+    print(f"🚀 Returning comprehensive product details for {sku}")
+    return response

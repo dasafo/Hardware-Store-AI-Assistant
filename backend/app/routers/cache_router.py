@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from app.utils.redis_client import redis_client
 from app.utils.auth import admin_guard
 
-router = APIRouter(prefix="/api/cache", tags=["cache"])
+router = APIRouter(tags=["cache"])
 
 class CacheStatsResponse(BaseModel):
     connected: bool
@@ -24,7 +24,7 @@ class CacheClearResponse(BaseModel):
     keys_deleted: int
     message: str
 
-@router.get("/stats", response_model=CacheStatsResponse)
+@router.get("/cache/stats", response_model=CacheStatsResponse)
 def get_cache_stats():
     """
     Get Redis cache statistics and health status.
@@ -41,7 +41,7 @@ def get_cache_stats():
             error=str(e)
         )
 
-@router.delete("/clear", response_model=CacheClearResponse)
+@router.delete("/cache/clear", response_model=CacheClearResponse)
 def clear_cache(
     pattern: str = None,
     user=Depends(admin_guard)  # ⬅️ Requires admin authentication
@@ -53,9 +53,9 @@ def clear_cache(
     - If no pattern provided, clears ALL cache entries
     
     Examples:
-    - Clear all: DELETE /api/cache/clear
-    - Clear embeddings: DELETE /api/cache/clear?pattern=embedding
-    - Clear searches: DELETE /api/cache/clear?pattern=search
+    - Clear all: DELETE /cache/clear
+    - Clear embeddings: DELETE /cache/clear?pattern=embedding
+    - Clear searches: DELETE /cache/clear?pattern=search
     """
     try:
         if not redis_client.is_connected():
@@ -83,7 +83,7 @@ def clear_cache(
             detail=f"Failed to clear cache: {str(e)}"
         )
 
-@router.get("/health")
+@router.get("/cache/health")
 def cache_health():
     """
     Simple health check for Redis connection.

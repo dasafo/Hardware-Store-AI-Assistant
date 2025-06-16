@@ -1,0 +1,213 @@
+{
+  "name": "Product Recommendations Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recommend",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-recommend",
+      "name": "Recommendation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "product-recommendations"
+    },
+    {
+      "parameters": {
+        "url": "http://backend:8000/products/{{$json.sku}}/similar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-similar-products",
+      "name": "Get Similar Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://backend:8000/products/{{$json.sku}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-product-details",
+      "name": "Get Product Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine product details with recommendations\nconst productDetails = $input.first().json;\nconst similarProducts = $input.last().json;\n\nconst response = {\n  product: productDetails,\n  recommendations: similarProducts,\n  metadata: {\n    timestamp: new Date().toISOString(),\n    recommendation_count: similarProducts.length || 0\n  }\n};\n\nreturn { json: response };"
+      },
+      "id": "combine-data",
+      "name": "Combine Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}"
+      },
+      "id": "respond-recommendations",
+      "name": "Respond with Recommendations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.sku}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-sku",
+      "name": "Validate SKU",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\": \"Invalid request\", \"message\": \"SKU parameter is required\"}"
+      },
+      "id": "error-sku",
+      "name": "SKU Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Recommendation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate SKU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Similar Products": {
+      "main": [
+        [
+          {
+            "node": "Combine Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Product Details": {
+      "main": [
+        [
+          {
+            "node": "Combine Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Data": {
+      "main": [
+        [
+          {
+            "node": "Respond with Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate SKU": {
+      "main": [
+        [
+          {
+            "node": "Get Product Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Similar Products",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKU Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1",
+  "id": "product-recommendations",
+  "meta": {
+    "instanceId": "hsai-n8n"
+  },
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "2",
+      "name": "hardware-store"
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "name": "WhatsApp Notifications Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "whatsapp-webhook",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "whatsapp-notifications"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process incoming WhatsApp message\nconst message = $json.message || {};\nconst from = $json.from || 'unknown';\nconst text = message.text || '';\n\n// Extract search query from message\nlet query = text.toLowerCase();\n\n// Remove common greeting words\nconst greetings = ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'hi', 'hello'];\ngreetings.forEach(greeting => {\n  query = query.replace(new RegExp(`\\\\b${greeting}\\\\b`, 'gi'), '').trim();\n});\n\n// Remove question words\nconst questionWords = ['busco', 'necesito', 'quiero', 'donde esta', 'tienes', 'hay'];\nquestionWords.forEach(word => {\n  query = query.replace(new RegExp(`\\\\b${word}\\\\b`, 'gi'), '').trim();\n});\n\nreturn {\n  json: {\n    original_message: text,\n    processed_query: query,\n    from: from,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "process-message",
+      "name": "Process WhatsApp Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://backend:8000/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.processed_query}}"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "search-products",
+      "name": "Search Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format response for WhatsApp\nconst searchResults = $input.last().json;\nconst messageData = $input.first().json;\n\nlet response = '';\n\nif (searchResults && searchResults.length > 0) {\n  response = `🔧 Encontré ${searchResults.length} productos para \"${messageData.processed_query}\":\\n\\n`;\n  \n  searchResults.forEach((product, index) => {\n    response += `${index + 1}. *${product.name}*\\n`;\n    response += `   💰 Precio: $${product.price}\\n`;\n    response += `   📦 Stock: ${product.stock_quantity}\\n`;\n    response += `   📋 SKU: ${product.sku}\\n\\n`;\n  });\n  \n  response += '¿Te interesa alguno de estos productos? 🛠️';\n} else {\n  response = `❌ No encontré productos para \"${messageData.processed_query}\".\\n\\n`;\n  response += '¿Podrías ser más específico? Por ejemplo:\\n';\n  response += '• \"martillo\"\\n';\n  response += '• \"tornillos\"\\n';\n  response += '• \"taladro\"';\n}\n\nreturn {\n  json: {\n    to: messageData.from,\n    message: response,\n    type: 'text'\n  }\n};"
+      },
+      "id": "format-response",
+      "name": "Format WhatsApp Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}"
+      },
+      "id": "respond-whatsapp",
+      "name": "Respond to WhatsApp",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.processed_query}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-query",
+      "name": "Validate Query",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const messageData = $json;\n\nreturn {\n  json: {\n    to: messageData.from,\n    message: '👋 ¡Hola! Soy el asistente de la ferretería.\\n\\n¿En qué puedo ayudarte hoy? Puedes preguntarme sobre:\\n\\n🔧 Herramientas\\n🔩 Tornillería\\n🎨 Pintura\\n⚡ Material eléctrico\\n\\nSolo escribe lo que buscas y te ayudo a encontrarlo.',\n    type: 'text'\n  }\n};"
+      },
+      "id": "greeting-response",
+      "name": "Greeting Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Validate Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Products": {
+      "main": [
+        [
+          {
+            "node": "Format WhatsApp Response",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Format WhatsApp Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Query": {
+      "main": [
+        [
+          {
+            "node": "Search Products",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Greeting Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Greeting Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1",
+  "id": "whatsapp-notifications",
+  "meta": {
+    "instanceId": "hsai-n8n"
+  },
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "3",
+      "name": "whatsapp"
+    },
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "1",
+      "name": "hardware-store"
+    }
+  ]
+}
