@@ -1,0 +1,15 @@
+[project]
+name = "hsai"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "dasafodata", email = "dasafo1985@gmail.com"},
+]
+dependencies = ["fastapi>=0.115.12", "uvicorn[standard]>=0.34.3", "openai>=1.86.0", "qdrant-client>=1.14.2", "psycopg2-binary>=2.9.10", "python-dotenv>=1.1.0", "tenacity>=8.0.0"]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false

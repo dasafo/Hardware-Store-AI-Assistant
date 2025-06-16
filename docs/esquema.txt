@@ -1,0 +1,12 @@
+| Nº | Módulo                        | Objetivo                                                            |
+| -- | ----------------------------- | ------------------------------------------------------------------- |
+| 1  | **Repositorio & Kanban**      | Crear repo GitHub, Project board y plantillas de issues             |
+| 2  | **Baseline Docker**           | Docker Compose con Postgres, PGAdmin, Qdrant, Redis, FastAPI        |
+| 3  | **Carga de datos**            | Ejecutar `create_tables.sql` + `load_data.sql` y validar en PGAdmin |
+| 4  | **Embeddings & Qdrant**       | Script para generar embeddings en lote y poblar Qdrant              |
+| 5  | **Endpoint /buscar**          | Implementar búsqueda semántica + respuesta JSON                     |
+| 6  | **Caching Redis**             | Cachear embeddings y resultados de búsqueda                         |
+| 7  | **n8n Workflow**              | Webhook → HTTP Request → respuesta; base para futuros canales       |
+| 8  | **Observabilidad**            | Logging estructurado, health-checks, métricas básicas               |
+| 9  | **Seguridad & Rate-limiting** | API-key, límite de peticiones por IP, .env & secrets                |
+| 10 | **Docs & Demo**               | README completo, script de demo, roadmap futuro                     |

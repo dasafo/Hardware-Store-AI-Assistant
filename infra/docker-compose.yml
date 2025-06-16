@@ -1,62 +1,72 @@
+# Docker Compose file for the Hardware Store AI Assistant application.
+
 services:
+  # PostgreSQL database service
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     env_file:
-      - ../.env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-hardware_store}
-      POSTGRES_USER: ${POSTGRES_USER:-david}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freedom85}
+      - ../backend/.env
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ../data/initdb:/docker-entrypoint-initdb.d
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # pgAdmin for database management
   pgadmin:
-    image: dpage/pgadmin4:8
+    image: dpage/pgadmin4:latest
     restart: unless-stopped
     env_file:
-      - ../.env
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      - ../backend/.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT:-5050}:80"
 
+  # Qdrant vector database service
   qdrant:
     image: qdrant/qdrant:v1.9.3
-    container_name: hsai-qdrant           # opcional
+    container_name: hsai-qdrant
     restart: unless-stopped
     env_file:
-      - ../.env
+      - ../backend/.env
     ports:
-      - "6333:6333"                       # REST + gRPC
+      - "${QDRANT_PORT:-6333}:6333" # REST + gRPC
     volumes:
-      - qdrant_data:/qdrant/storage    
-      
+      - qdrant_data:/qdrant/storage
+
+  # Redis service for caching
   redis:
     image: redis:7-alpine
     container_name: hsai-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"   # persistencia
+      - "${REDIS_PORT:-6380}:6379"
 
+  # Backend FastAPI application service
   backend:
     build:
       context: ../backend
     container_name: hsai-backend
     restart: unless-stopped
+    env_file:
+      - ../backend/.env
     ports:
-      - "8000:8000"
+      - "${FASTAPI_PORT:-8000}:8000"
     depends_on:
-      - db
-      - qdrant
-      - redis
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
 
-# Qdrant, Redis y FastAPI se añadirán en pasos posteriores
+# Named volumes for data persistence
 volumes:
   db_data:
   qdrant_data:

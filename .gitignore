@@ -11,9 +11,11 @@
 *.env
 secrets/
 .secrets
+backend/.env
 
 # ────────────── Python ──────────────
 __pycache__/
+backend/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -46,6 +48,7 @@ venv.bak/
 .venv/
 .conda/
 conda-meta/
+backend/.venv/
 
 # ────────────── IDEs & Editors ──────────────
 .vscode/
