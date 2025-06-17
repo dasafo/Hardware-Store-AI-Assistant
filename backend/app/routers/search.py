@@ -1,10 +1,11 @@
 # routers/search.py
 
 from fastapi import APIRouter, HTTPException
-from app.models.product import SearchRequest, SearchResponse, Product, ProductDetailsResponse, ProductWithStatus, ProductMetadata, ProductActions
+from app.models.product import Product, ProductDetailsResponse, ProductWithStatus, ProductMetadata, ProductActions, SearchRequest, SearchResponse
 from app.services.embeddings import get_embedding
 from app.services.qdrant import search_in_qdrant
-from app.services.postgres import get_products_by_ids
+from app.services.postgres import get_products_by_skus
+from app.utils.logger import logger, log_with_context
 from app.utils.redis_client import redis_client
 from datetime import datetime
 
@@ -28,10 +29,23 @@ def search_products(payload: SearchRequest):
     if redis_client.is_connected():
         cached_results = redis_client.get_search_results(query, top_k)
         if cached_results:
-            print(f"⚡ Complete search results served from cache")
+            log_with_context(
+                logger,
+                "info",
+                "Search results served from cache",
+                query=query,
+                limit=top_k,
+                results_count=len(cached_results)
+            )
             return {"results": [Product(**p) for p in cached_results]}
     
-    print(f"🔍 Processing search query: '{query}'")
+    log_with_context(
+        logger,
+        "info",
+        "Processing search query",
+        query=query,
+        limit=top_k
+    )
     
     # 2. Generate an embedding from the user's search query (with embedding cache)
     embedding = get_embedding(query)
@@ -40,12 +54,27 @@ def search_products(payload: SearchRequest):
     skus = search_in_qdrant(embedding, top_k=top_k)
     
     # 4. Retrieve the full product details from PostgreSQL using the SKUs found
-    products = get_products_by_ids(skus)
+    products = get_products_by_skus(skus)
     
     # 5. Cache the complete search results
     if redis_client.is_connected() and products:
         redis_client.set_search_results(query, products, top_k)
-        print(f"💾 Cached complete search results")
+        log_with_context(
+            logger,
+            "info",
+            "Search results cached",
+            query=query,
+            results_count=len(products)
+        )
+    
+    log_with_context(
+        logger,
+        "info",
+        "Search completed successfully",
+        query=query,
+        results_found=len(products),
+        skus_found=len(skus)
+    )
     
     # 6. Return the products found
     return {"results": [Product(**p) for p in products]}
@@ -61,16 +90,33 @@ def get_product_by_sku(sku: str):
     Returns:
         Product: The product details
     """
-    print(f"🔍 Getting product details for SKU: {sku}")
+    log_with_context(
+        logger,
+        "info",
+        "Getting product details by SKU",
+        sku=sku
+    )
     
     # Get product details from PostgreSQL
-    products = get_products_by_ids([sku])
+    products = get_products_by_skus([sku])
     
     if not products:
+        log_with_context(
+            logger,
+            "warning",
+            "Product not found",
+            sku=sku
+        )
         raise HTTPException(status_code=404, detail=f"Product with SKU {sku} not found")
     
     product = products[0]
-    print(f"✅ Found product: {product['name']}")
+    log_with_context(
+        logger,
+        "info",
+        "Product details retrieved successfully",
+        sku=sku,
+        product_name=product['name']
+    )
     
     return Product(**product)
 
@@ -86,16 +132,34 @@ def get_product_details(sku: str, recommendations_limit: int = 5):
     Returns:
         ProductDetailsResponse: Comprehensive product information
     """
-    print(f"🔍 Getting detailed product information for SKU: {sku}")
+    log_with_context(
+        logger,
+        "info",
+        "Getting detailed product information",
+        sku=sku,
+        recommendations_limit=recommendations_limit
+    )
     
     # Get product details from PostgreSQL
-    products = get_products_by_ids([sku])
+    products = get_products_by_skus([sku])
     
     if not products:
+        log_with_context(
+            logger,
+            "warning",
+            "Product not found for detailed view",
+            sku=sku
+        )
         raise HTTPException(status_code=404, detail=f"Product with SKU {sku} not found")
     
     product_data = products[0]
-    print(f"✅ Found product: {product_data['name']}")
+    log_with_context(
+        logger,
+        "info",
+        "Product found for detailed view",
+        sku=sku,
+        product_name=product_data['name']
+    )
     
     # Calculate stock status
     stock_quantity = product_data['stock']
@@ -118,12 +182,24 @@ def get_product_details(sku: str, recommendations_limit: int = 5):
         
         # Get product details for recommendations
         if filtered_skus:
-            related_products = get_products_by_ids(filtered_skus)
+            related_products = get_products_by_skus(filtered_skus)
         
-        print(f"✅ Found {len(related_products)} related products")
+        log_with_context(
+            logger,
+            "info",
+            "Related products found",
+            sku=sku,
+            related_count=len(related_products)
+        )
         
     except Exception as e:
-        print(f"⚠️ Could not get related products: {str(e)}")
+        log_with_context(
+            logger,
+            "error",
+            "Could not get related products",
+            sku=sku,
+            error=str(e)
+        )
         related_products = []
     
     # Create response
@@ -152,5 +228,13 @@ def get_product_details(sku: str, recommendations_limit: int = 5):
         actions=actions
     )
     
-    print(f"🚀 Returning comprehensive product details for {sku}")
+    log_with_context(
+        logger,
+        "info",
+        "Comprehensive product details response prepared",
+        sku=sku,
+        stock_status=stock_status,
+        related_products_count=len(related_products)
+    )
+    
     return response

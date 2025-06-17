@@ -5,6 +5,9 @@ from qdrant_client import QdrantClient, models
 from app.utils.db import get_connection
 from app.services.embeddings import get_embeddings
 import hashlib
+import asyncio
+import time
+import logging
 
 COLLECTION_NAME = 'products'
 BATCH_SIZE = 16
@@ -19,7 +22,7 @@ def get_products_by_skus(skus: List[str]) -> List[dict]:
         return []
     
     placeholders = ','.join(['%s'] * len(skus))
-    query = f"SELECT sku, name, description FROM product WHERE sku IN ({placeholders})"
+    query = f"SELECT sku, name, description FROM products WHERE sku IN ({placeholders})"
     
     with get_connection() as conn, conn.cursor() as cursor:
         cursor.execute(query, skus)
@@ -28,7 +31,7 @@ def get_products_by_skus(skus: List[str]) -> List[dict]:
 
 def get_all_products_for_reindex() -> List[dict]:
     """Get all products for reindexing"""
-    query = "SELECT sku, name, description FROM product"
+    query = "SELECT sku, name, description FROM products"
     
     with get_connection() as conn, conn.cursor() as cursor:
         cursor.execute(query)

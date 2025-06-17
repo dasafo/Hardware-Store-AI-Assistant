@@ -1,0 +1,182 @@
+{
+  "name": "product",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "product",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "477d0d3e-dadf-4b4f-a7f5-782825883319",
+      "name": "Product Details Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        100
+      ],
+      "webhookId": "product-details"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.sku}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "8e753ebf-5c2d-46d5-a20f-f66edb6f9b7d",
+      "name": "Validate SKU",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://backend:8000/products/{{ $json.body.sku }}/details",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7eb9e5fa-dd09-41d6-9bab-f3f71705b5f4",
+      "name": "Get Product Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        20,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "62709bea-7637-4173-8658-260ef00c82c0",
+      "name": "Respond with Product Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        260,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\": \"Invalid request\", \"message\": \"SKU parameter is required\", \"status\": \"error\"}",
+        "options": {}
+      },
+      "id": "5394a4b7-56ec-42b5-8102-59d46596b516",
+      "name": "SKU Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        360
+      ]
+    }
+  ],
+  "pinData": {
+    "Product Details Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "localhost:5678",
+            "user-agent": "curl/8.5.0",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "content-length": "19"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "sku": "SKU00001"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/product",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Product Details Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate SKU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate SKU": {
+      "main": [
+        [
+          {
+            "node": "Get Product Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKU Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Product Details": {
+      "main": [
+        [
+          {
+            "node": "Respond with Product Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2f9ee5e0-af96-4c29-8120-aed1bf5a171d",
+  "meta": {
+    "instanceId": "64b7ae8b787535a95cdb5885886ab41716afd4fb5c7985b50ffbd6bbe39db9aa"
+  },
+  "id": "sUGerG6v16wCncKG",
+  "tags": [
+    {
+      "createdAt": "2025-06-16T15:39:41.197Z",
+      "updatedAt": "2025-06-16T15:39:41.197Z",
+      "id": "k8CEGaul6HqFZIth",
+      "name": "hardware-store"
+    },
+    {
+      "createdAt": "2025-06-16T16:55:39.946Z",
+      "updatedAt": "2025-06-16T16:55:39.946Z",
+      "id": "vPvaNSViif9PGk4n",
+      "name": "products"
+    }
+  ]
+}

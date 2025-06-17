@@ -6,7 +6,7 @@ from typing import List
 from app.models.product import SearchResponse, Product
 from app.services.embeddings import get_embedding
 from app.services.qdrant import search_in_qdrant
-from app.services.postgres import get_products_by_ids
+from app.services.postgres import get_products_by_skus
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ def get_recommendations(request: RecommendRequest):
     
     try:
         # First, get the product details for the given SKU
-        products = get_products_by_ids([request.sku])
+        products = get_products_by_skus([request.sku])
         
         if not products:
             raise HTTPException(status_code=404, detail=f"Product with SKU {request.sku} not found")
@@ -52,7 +52,7 @@ def get_recommendations(request: RecommendRequest):
         filtered_skus = [sku for sku in similar_skus if sku != request.sku][:request.limit]
         
         # Get product details for recommendations
-        recommendations = get_products_by_ids(filtered_skus)
+        recommendations = get_products_by_skus(filtered_skus)
         
         print(f"✅ Found {len(recommendations)} recommendations")
         

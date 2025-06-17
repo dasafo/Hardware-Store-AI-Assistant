@@ -1,5 +1,5 @@
 {
-  "name": "WhatsApp Notifications Workflow",
+  "name": "Whatsapp",
   "nodes": [
     {
       "parameters": {
@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "whatsapp-webhook",
+      "id": "099835ae-494c-47a2-b183-50380be36c8a",
       "name": "WhatsApp Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        240,
-        300
+        -380,
+        180
       ],
       "webhookId": "whatsapp-notifications"
     },
@@ -22,13 +22,13 @@
       "parameters": {
         "jsCode": "// Process incoming WhatsApp message\nconst message = $json.message || {};\nconst from = $json.from || 'unknown';\nconst text = message.text || '';\n\n// Extract search query from message\nlet query = text.toLowerCase();\n\n// Remove common greeting words\nconst greetings = ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'hi', 'hello'];\ngreetings.forEach(greeting => {\n  query = query.replace(new RegExp(`\\\\b${greeting}\\\\b`, 'gi'), '').trim();\n});\n\n// Remove question words\nconst questionWords = ['busco', 'necesito', 'quiero', 'donde esta', 'tienes', 'hay'];\nquestionWords.forEach(word => {\n  query = query.replace(new RegExp(`\\\\b${word}\\\\b`, 'gi'), '').trim();\n});\n\nreturn {\n  json: {\n    original_message: text,\n    processed_query: query,\n    from: from,\n    timestamp: new Date().toISOString()\n  }\n};"
       },
-      "id": "process-message",
+      "id": "425aa33d-3f0d-4fe9-a79f-0f62874dda9c",
       "name": "Process WhatsApp Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
-        300
+        -160,
+        180
       ]
     },
     {
@@ -58,40 +58,41 @@
         },
         "options": {}
       },
-      "id": "search-products",
+      "id": "0241756e-10ee-4dd3-b2bd-8fe48cc6f253",
       "name": "Search Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        680,
-        300
+        60,
+        260
       ]
     },
     {
       "parameters": {
         "jsCode": "// Format response for WhatsApp\nconst searchResults = $input.last().json;\nconst messageData = $input.first().json;\n\nlet response = '';\n\nif (searchResults && searchResults.length > 0) {\n  response = `🔧 Encontré ${searchResults.length} productos para \"${messageData.processed_query}\":\\n\\n`;\n  \n  searchResults.forEach((product, index) => {\n    response += `${index + 1}. *${product.name}*\\n`;\n    response += `   💰 Precio: $${product.price}\\n`;\n    response += `   📦 Stock: ${product.stock_quantity}\\n`;\n    response += `   📋 SKU: ${product.sku}\\n\\n`;\n  });\n  \n  response += '¿Te interesa alguno de estos productos? 🛠️';\n} else {\n  response = `❌ No encontré productos para \"${messageData.processed_query}\".\\n\\n`;\n  response += '¿Podrías ser más específico? Por ejemplo:\\n';\n  response += '• \"martillo\"\\n';\n  response += '• \"tornillos\"\\n';\n  response += '• \"taladro\"';\n}\n\nreturn {\n  json: {\n    to: messageData.from,\n    message: response,\n    type: 'text'\n  }\n};"
       },
-      "id": "format-response",
+      "id": "4fc35208-5e81-45ac-9e16-6cefbb94877d",
       "name": "Format WhatsApp Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
-        300
+        280,
+        180
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{$json}}"
+        "responseBody": "={{$json}}",
+        "options": {}
       },
-      "id": "respond-whatsapp",
+      "id": "f3b31fe8-66ce-4ec2-b0bc-a242ed944124",
       "name": "Respond to WhatsApp",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1120,
-        300
+        500,
+        180
       ]
     },
     {
@@ -105,29 +106,30 @@
           ]
         }
       },
-      "id": "validate-query",
+      "id": "5be79fc2-1390-42de-b2a2-ad236ac61bc9",
       "name": "Validate Query",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        680,
-        180
+        60,
+        60
       ]
     },
     {
       "parameters": {
         "jsCode": "const messageData = $json;\n\nreturn {\n  json: {\n    to: messageData.from,\n    message: '👋 ¡Hola! Soy el asistente de la ferretería.\\n\\n¿En qué puedo ayudarte hoy? Puedes preguntarme sobre:\\n\\n🔧 Herramientas\\n🔩 Tornillería\\n🎨 Pintura\\n⚡ Material eléctrico\\n\\nSolo escribe lo que buscas y te ayudo a encontrarlo.',\n    type: 'text'\n  }\n};"
       },
-      "id": "greeting-response",
+      "id": "4e6dd2bc-da9b-4167-acd8-18b393e59bf7",
       "name": "Greeting Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
-        480
+        280,
+        360
       ]
     }
   ],
+  "pinData": {},
   "connections": {
     "WhatsApp Webhook": {
       "main": [
@@ -147,17 +149,6 @@
             "node": "Validate Query",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Search Products": {
-      "main": [
-        [
-          {
-            "node": "Format WhatsApp Response",
-            "type": "main",
-            "index": 1
           }
         ]
       ]
@@ -203,25 +194,27 @@
       ]
     }
   },
-  "active": true,
-  "settings": {},
-  "versionId": "1",
-  "id": "whatsapp-notifications",
-  "meta": {
-    "instanceId": "hsai-n8n"
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
   },
+  "versionId": "8dbb534b-1d80-41b8-8b34-9a04b6d79ac4",
+  "meta": {
+    "instanceId": "64b7ae8b787535a95cdb5885886ab41716afd4fb5c7985b50ffbd6bbe39db9aa"
+  },
+  "id": "ZP9U0JSeE1L5UBFb",
   "tags": [
     {
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
-      "id": "3",
-      "name": "whatsapp"
+      "createdAt": "2025-06-16T15:39:41.197Z",
+      "updatedAt": "2025-06-16T15:39:41.197Z",
+      "id": "k8CEGaul6HqFZIth",
+      "name": "hardware-store"
     },
     {
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
-      "id": "1",
-      "name": "hardware-store"
+      "createdAt": "2025-06-16T15:40:40.245Z",
+      "updatedAt": "2025-06-16T15:40:40.245Z",
+      "id": "lEnrdHtQnZlFrxyU",
+      "name": "whatsapp"
     }
   ]
 }

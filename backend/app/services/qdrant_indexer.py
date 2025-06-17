@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import logging
 from app.utils.db import get_connection
 from qdrant_client import QdrantClient, models
+from app.services.qdrant import create_collection_if_not_exists
 from app.services.embeddings import get_embeddings
 import hashlib
 
@@ -14,7 +16,7 @@ def sku_to_id(sku):
     return int(hashlib.md5(sku.encode()).hexdigest()[:8], 16)
 
 def get_all_products(cursor):
-    cursor.execute("SELECT sku, name, description FROM product")
+    cursor.execute("SELECT sku, name, description FROM products")
     while True:
         records = cursor.fetchmany(BATCH_SIZE)
         if not records:

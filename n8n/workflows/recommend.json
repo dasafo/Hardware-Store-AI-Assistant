@@ -1,0 +1,155 @@
+{
+  "name": "recommend",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recommend",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3158b671-f82d-46ec-92fc-7f3e49b8571f",
+      "name": "Recommendation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        80
+      ],
+      "webhookId": "product-recommendations"
+    },
+    {
+      "parameters": {
+        "url": "=   http://backend:8000/products/{{ $json.body.sku }}/details",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d5cc0386-c217-4398-8718-339ca0f1e207",
+      "name": "Get Similar Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        20,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "41525c14-2382-4549-9047-5f4f99a81517",
+      "name": "Respond with Recommendations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.sku}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "f5e5b410-95ea-4391-9baa-434f7f0faea1",
+      "name": "Validate SKU",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\": \"Invalid request\", \"message\": \"SKU parameter is required\"}",
+        "options": {}
+      },
+      "id": "f92adc8d-0c88-4626-8fab-5d655e1af61f",
+      "name": "SKU Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        80,
+        320
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recommendation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate SKU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate SKU": {
+      "main": [
+        [
+          {
+            "node": "Get Similar Products",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SKU Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Similar Products": {
+      "main": [
+        [
+          {
+            "node": "Respond with Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9d076f06-fb40-4527-8213-7e482bf92b4c",
+  "meta": {
+    "instanceId": "64b7ae8b787535a95cdb5885886ab41716afd4fb5c7985b50ffbd6bbe39db9aa"
+  },
+  "id": "wyuqW1IlYqSO7SAM",
+  "tags": [
+    {
+      "createdAt": "2025-06-16T15:39:41.197Z",
+      "updatedAt": "2025-06-16T15:39:41.197Z",
+      "id": "k8CEGaul6HqFZIth",
+      "name": "hardware-store"
+    }
+  ]
+}

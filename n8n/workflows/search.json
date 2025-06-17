@@ -1,5 +1,5 @@
 {
-  "name": "Hardware Store Search Webhook",
+  "name": "search",
   "nodes": [
     {
       "parameters": {
@@ -8,18 +8,19 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-node",
+      "id": "2c41f93b-61f3-48ba-ba19-b61171395083",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        240,
-        300
+        -380,
+        80
       ],
       "webhookId": "hardware-search"
     },
     {
       "parameters": {
+        "method": "POST",
         "url": "http://backend:8000/search",
         "sendHeaders": true,
         "headerParameters": {
@@ -35,51 +36,53 @@
           "parameters": [
             {
               "name": "query",
-              "value": "={{$json.query}}"
+              "value": "={{$json.body.query}}"
             },
             {
               "name": "limit",
-              "value": "={{$json.limit || 5}}"
+              "value": "={{$json.body.limit || 5}}"
             }
           ]
         },
         "options": {}
       },
-      "id": "http-request-node",
+      "id": "dbc412b1-718f-4238-8273-bdb27d94ccea",
       "name": "Search Hardware",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        460,
-        300
+        120,
+        0
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{$json}}"
+        "responseBody": "={{$json}}",
+        "options": {}
       },
-      "id": "respond-node",
+      "id": "e64f6cc1-e124-421d-b838-271e84f88327",
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        680,
-        300
+        340,
+        0
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "{\"error\": \"Invalid request\", \"message\": \"Query parameter is required\"}"
+        "responseBody": "{\"error\": \"Invalid request\", \"message\": \"Query parameter is required\"}",
+        "options": {}
       },
-      "id": "error-response-node",
+      "id": "4e3cf4dd-3a13-47bd-aa84-43fa684b30ac",
       "name": "Error Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        680,
-        480
+        60,
+        260
       ]
     },
     {
@@ -87,22 +90,23 @@
         "conditions": {
           "string": [
             {
-              "value1": "={{$json.query}}",
+              "value1": "={{$json.body.query}}",
               "operation": "isNotEmpty"
             }
           ]
         }
       },
-      "id": "validate-node",
+      "id": "a71fdbb0-7483-42d0-99ad-f888a032f5a1",
       "name": "Validate Input",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        460,
-        180
+        -160,
+        20
       ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -146,17 +150,19 @@
     }
   },
   "active": true,
-  "settings": {},
-  "versionId": "1",
-  "id": "hardware-search-webhook",
-  "meta": {
-    "instanceId": "hsai-n8n"
+  "settings": {
+    "executionOrder": "v1"
   },
+  "versionId": "a5b918c9-4c3d-494f-a746-462331d0b54c",
+  "meta": {
+    "instanceId": "64b7ae8b787535a95cdb5885886ab41716afd4fb5c7985b50ffbd6bbe39db9aa"
+  },
+  "id": "pdUcHt0i3ko6TWoy",
   "tags": [
     {
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
-      "id": "1",
+      "createdAt": "2025-06-16T15:39:41.197Z",
+      "updatedAt": "2025-06-16T15:39:41.197Z",
+      "id": "k8CEGaul6HqFZIth",
       "name": "hardware-store"
     }
   ]
