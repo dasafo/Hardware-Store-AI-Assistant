@@ -1,0 +1,86 @@
+{
+  "name": "inventory-alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "80da54af-0c59-4b35-ab66-1d27ca56d4b3",
+      "name": "Schedule Inventory Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/inventory/check",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b7012597-4218-4b82-a3a2-953594f9d35c",
+      "name": "Get All Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -560,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DZ0m27YMjHU4LWjy",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Inventory Check": {
+      "main": [
+        [
+          {
+            "node": "Get All Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Products": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d8a38aca-b9af-41a3-a112-d4cfb4c117dd",
+  "meta": {
+    "instanceId": "3ce9805f588d6c309312c02e3d094119190ad8db2536d3e1412ba8dcd400ee1d"
+  },
+  "id": "f1K8H76byXJ7Jq2j",
+  "tags": []
+}

@@ -1,10 +1,11 @@
 # routers/search.py
 
 from fastapi import APIRouter, HTTPException
+from typing import List
 from app.models.product import Product, ProductDetailsResponse, ProductWithStatus, ProductMetadata, ProductActions, SearchRequest, SearchResponse
 from app.services.embeddings import get_embedding
 from app.services.qdrant import search_in_qdrant
-from app.services.postgres import get_products_by_skus
+from app.services.postgres import get_products_by_skus, get_all_products
 from app.utils.logger import logger, log_with_context
 from app.utils.redis_client import redis_client
 from datetime import datetime
@@ -238,3 +239,26 @@ def get_product_details(sku: str, recommendations_limit: int = 5):
     )
     
     return response
+
+@router.get("/products", response_model=List[Product])
+def get_all_products_endpoint():
+    """
+    Get all products from the database.
+    This endpoint is used by n8n for inventory checks.
+    """
+    log_with_context(logger, "info", "Fetching all products for inventory check")
+    
+    # Retrieve all products from PostgreSQL
+    products = get_all_products()
+    
+    if not products:
+        log_with_context(logger, "warning", "No products found in the database")
+        return []
+
+    log_with_context(
+        logger,
+        "info",
+        f"Successfully fetched {len(products)} products"
+    )
+    
+    return [Product(**p) for p in products]

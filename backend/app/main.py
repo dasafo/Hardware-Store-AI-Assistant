@@ -6,7 +6,7 @@ import uvicorn
 import os
 from contextlib import asynccontextmanager
 
-from .routers import search, recommendations, reindex_router, cache_router, chat, health, security
+from .routers import search, recommendations, reindex_router, cache_router, chat, health, security, notifications, inventory
 from .middleware.logging_middleware import LoggingMiddleware
 from .middleware.security_middleware import SecurityMiddleware
 from .services.postgres import init_postgres
@@ -54,6 +54,12 @@ app.include_router(cache_router.router)
 
 # Include the security router to handle security-related endpoints.
 app.include_router(security.router)
+
+# Include the notifications router
+app.include_router(notifications.router)
+
+# Include the inventory router
+app.include_router(inventory.router)
 
 @app.on_event("startup")
 async def startup_event():
