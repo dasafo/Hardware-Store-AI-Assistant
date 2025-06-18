@@ -7,6 +7,10 @@ from app.services.qdrant import search_in_qdrant
 from app.services.postgres import get_products_by_skus
 from datetime import datetime
 import re
+from pydantic import BaseModel
+from app.utils.logger import logger, log_with_context
+from typing import Union
+from app.services.openai_service import get_openai_service
 
 router = APIRouter()
 
@@ -182,4 +186,126 @@ def chat_with_assistant(payload: ChatRequest):
     )
     
     print(f"🚀 Returning chat response with {len(products)} products and {len(chat_data['suggestions'])} suggestions")
-    return response 
+    return response
+
+# ----------------------------------------------------------------
+# Telegram-specific Formatter
+# ----------------------------------------------------------------
+
+def format_telegram_response(intent: str, keywords: str, products: list) -> str:
+    """
+    Formats a response string specifically for Telegram, using Markdown.
+    """
+    if intent == "greeting":
+        return "¡Hola! 👋 Soy tu asistente de ferretería. ¿Qué necesitas buscar hoy?"
+
+    elif intent == "help":
+        return "Puedes preguntarme por cualquier producto. Por ejemplo: 'busco un martillo' o 'pintura roja'."
+
+    elif intent == "search":
+        if products:
+            response = f"✅ Encontré {len(products)} productos para *{keywords}*:\n\n"
+            for p in products[:3]: # Limitar a los 3 primeros para no saturar
+                response += f"*{p.get('name')}*\n"
+                response += f"  - SKU: `{p.get('sku')}`\n"
+                response += f"  - Stock: {p.get('stock', 0)} unidades\n\n"
+            if len(products) > 3:
+                response += "_Y más... Intenta ser más específico si no encuentras lo que buscas._"
+            return response
+        else:
+            return f"❌ No encontré productos para *{keywords}*. Por favor, intenta con otro término."
+
+    return "¿Disculpa? No te he entendido. Intenta preguntarme por un producto."
+
+# ----------------------------------------------------------------
+# Telegram Bot Endpoint
+# ----------------------------------------------------------------
+
+class TelegramRequest(BaseModel):
+    message: str
+    user_id: Union[str, int]
+
+@router.post("/chat/telegram")
+def chat_with_telegram_bot(request: TelegramRequest):
+    """
+    Enhanced Telegram bot endpoint using OpenAI for intelligent responses.
+    Now provides natural conversation, smart product search, and contextual help.
+    """
+    try:
+        log_with_context(
+            logger,
+            "info",
+            "Processing Telegram message with AI",
+            user_id=str(request.user_id),
+            message_length=len(request.message)
+        )
+        
+        # Get OpenAI service
+        openai_service = get_openai_service()
+        
+        # Generate intelligent response
+        ai_response = openai_service.generate_smart_response(
+            user_message=request.message,
+            user_id=str(request.user_id),
+            conversation_history=[]  # TODO: Implement conversation history in Phase 2
+        )
+        
+        # Format response for Telegram
+        response_text = ai_response['response']
+        
+        # Add product information if products were found
+        if ai_response.get('products'):
+            products = ai_response['products']
+            
+            # Add a separator if there are products
+            if len(products) > 0:
+                response_text += "\n\n📦 **Productos encontrados:**\n"
+                
+                for i, product in enumerate(products[:3], 1):  # Show max 3 products
+                    stock_emoji = "✅" if product.get('stock', 0) > 0 else "❌"
+                    
+                    response_text += f"\n**{i}. {product.get('name', 'N/A')}**\n"
+                    response_text += f"• SKU: `{product.get('sku', 'N/A')}`\n"
+                    response_text += f"• Stock: {product.get('stock', 0)} unidades {stock_emoji}\n"
+                    response_text += f"• Categoría: {product.get('category', 'N/A')}\n"
+                    
+                    # Add truncated description
+                    description = product.get('description', '')
+                    if description:
+                        truncated_desc = description[:100] + "..." if len(description) > 100 else description
+                        response_text += f"• {truncated_desc}\n"
+        
+        # Add helpful suggestions based on intent
+        intent = ai_response.get('intent', 'general_help')
+        if intent == 'product_search' and not ai_response.get('products'):
+            response_text += "\n\n💡 **Sugerencia:** Intenta ser más específico o usa sinónimos."
+        elif intent == 'greeting':
+            response_text += "\n\n🔍 Puedes preguntarme por productos, precios, disponibilidad o hacer consultas técnicas."
+        elif intent == 'purchase_intent':
+            response_text += "\n\n🛒 Para procesar tu compra, necesitaré algunos datos. ¿Continuamos?"
+        
+        log_with_context(
+            logger,
+            "info",
+            "AI response generated successfully",
+            user_id=str(request.user_id),
+            intent=intent,
+            products_found=len(ai_response.get('products', [])),
+            confidence=ai_response.get('confidence', 0.0)
+        )
+        
+        return {"response": response_text}
+        
+    except Exception as e:
+        log_with_context(
+            logger,
+            "error",
+            "Error in AI-powered Telegram chat",
+            user_id=str(request.user_id),
+            error=str(e)
+        )
+        
+        # Fallback to friendly error message
+        return {
+            "response": "🤖 Disculpa, tuve un pequeño problema procesando tu mensaje. ¿Puedes intentarlo de nuevo?\n\nSi persiste el problema, escribe 'ayuda' para opciones disponibles."
+        } 

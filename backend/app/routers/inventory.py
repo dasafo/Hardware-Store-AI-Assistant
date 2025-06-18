@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Header, Depends, HTTPException
 from typing import List
 from app.services.postgres import get_all_products
+from app.services.notification_service import NotificationService
 from app.utils.logger import logger, log_with_context
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
@@ -61,16 +62,35 @@ def check_inventory_and_alert():
                 alert_message += f"• {product.get('name')} - Stock: {product.get('stock')} (SKU: {product.get('sku')})\\n"
             alert_message += '\\n'
         
-        # Loguear la alerta completa
-        log_with_context(
-            logger,
-            "warning",
-            "Inventory alert generated",
-            details=alert_message
+        # Usar el servicio de notificaciones
+        notification_service = NotificationService(context={"source": "inventory_check"})
+        
+        # 1. Enviar siempre al log
+        notification_service.send_log_alert(
+            subject="Inventory Alert Generated",
+            details=alert_message,
+            severity="warning"
+        )
+        
+        # 2. Simular envío por otros canales
+        notification_service.send_email_alert(
+            recipient="admin@hardwarestore.com",
+            subject="Alerta de Inventario",
+            body=alert_message
+        )
+        
+        notification_service.send_telegram_alert(
+            chat_id="admin_group_chat",
+            message=alert_message
         )
         
         return {
             "status": "alert_generated",
+            "delivery_status": {
+                "log": "sent",
+                "email": "simulated",
+                "telegram": "simulated"
+            },
             "out_of_stock_count": len(out_of_stock_products),
             "low_stock_count": len(low_stock_products)
         }
