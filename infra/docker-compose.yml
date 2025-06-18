@@ -68,25 +68,43 @@ services:
       qdrant:
         condition: service_started
 
+  # ngrok service for exposing n8n webhooks
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: hsai-ngrok
+    restart: unless-stopped
+    command: 
+      - "start"
+      - "--all"
+    volumes:
+      - ./config/ngrok.yml:/etc/ngrok.yml
+    ports:
+      - "4041:4040" # ngrok web UI
+    depends_on:
+      - n8n
+
   # n8n workflow automation service
   n8n:
     image: n8nio/n8n:latest
     container_name: hsai-n8n
     restart: unless-stopped
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=admin
-      - N8N_HOST=0.0.0.0
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678
-      - GENERIC_TIMEZONE=Europe/Madrid
+    user: "node"
+    env_file:
+      - ../backend/.env
     ports:
-      - "${N8N_PORT:-5678}:5678"
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - GENERIC_TIMEZONE=Europe/Madrid
+      - NODE_ENV=development
     volumes:
-      - n8n_data:/home/node/.n8n
-      - ../n8n/workflows:/home/node/.n8n/workflows
+      - ./data/n8n:/home/node/.n8n
     depends_on:
       - backend
 
